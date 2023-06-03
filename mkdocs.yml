@@ -38,11 +38,11 @@ repo_name: funny-test/image-center
 repo_url: "https://github.com/funny-test/image-center"
 
 plugins:
-#  - termynal
+  - termynal
   - search
 #  - meta
-  - markdownextradata:
-      data: data
+#  - markdownextradata:
+#      data: data
 
 nav:
   - 首页: index.md
