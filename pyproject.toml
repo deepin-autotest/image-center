@@ -36,11 +36,11 @@ test = [
 doc = ["mkdocs-material"]
 
 [tool.hatch.version]
-path = "image-center/__version__.py"
+path = "image_center/__version__.py"
 
 [tool.hatch.build.targets.sdist]
 include = [
-    "/image-center",
+    "/image_center",
     "/README.md",
 ]
 
