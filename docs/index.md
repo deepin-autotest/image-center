@@ -15,6 +15,7 @@
 
 ```console
 pip install image-center
+---> 100%
 ```
 
 ## 使用说明

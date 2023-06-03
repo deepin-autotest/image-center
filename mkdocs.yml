@@ -1,4 +1,4 @@
-site_name: funnylog
+site_name: image-center
 copyright: Copyright © 2022-2023 Funny-Test. All Rights Reserved.
 theme:
   name: material
@@ -34,8 +34,8 @@ theme:
     repo: fontawesome/brands/github
 
 # 右上角
-repo_name: funny-test/funnylog
-repo_url: "https://github.com/funny-test/funnylog"
+repo_name: funny-test/image-center
+repo_url: "https://github.com/funny-test/image-center"
 
 plugins:
 #  - termynal
@@ -48,25 +48,25 @@ nav:
   - 首页: index.md
 
 
-markdown_extensions:
-- toc:
-    permalink: true
-- markdown.extensions.codehilite:
-    guess_lang: false
-- mdx_include:
-    base_path: docs
-- admonition
-- codehilite
-- extra
-- pymdownx.superfences:
-    custom_fences:
-    - name: mermaid
-      class: mermaid
-      format: !!python/name:pymdownx.superfences.fence_code_format ''
-- pymdownx.tabbed:
-    alternate_style: true
-- attr_list
-- md_in_html
+#markdown_extensions:
+#- toc:
+#    permalink: true
+#- markdown.extensions.codehilite:
+#    guess_lang: false
+#- mdx_include:
+#    base_path: docs
+#- admonition
+#- codehilite
+#- extra
+#- pymdownx.superfences:
+#    custom_fences:
+#    - name: mermaid
+#      class: mermaid
+#      format: !!python/name:pymdownx.superfences.fence_code_format ''
+#- pymdownx.tabbed:
+#    alternate_style: true
+#- attr_list
+#- md_in_html
 
 extra:
   analytics:
@@ -74,9 +74,9 @@ extra:
 #    property: G-YNEVN69SC3
   generator: false
 
-extra_css:
-- /css/termynal.css
-- /css/custom.css
-extra_javascript:
-- /js/termynal.js
-- /js/custom.js
+#extra_css:
+#- /css/termynal.css
+#- /css/custom.css
+#extra_javascript:
+#- /js/termynal.js
+#- /js/custom.js
