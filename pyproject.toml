@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "image-center"
 authors = [
-  { name="mikigo", email="1964191531@qq.com" },
+    { name = "mikigo", email = "1964191531@qq.com" },
 ]
 description = "image-center"
 readme = "README.md"
@@ -17,16 +17,17 @@ classifiers = [
 ]
 
 dependencies = [
-    "allure-pytest",
+    "pyscreenshot",
+    "pillow"
 ]
 
 
 dynamic = ["version"]
 
 [project.optional-dependencies]
-#server = [
-#    "paddlepaddle",
-#    "paddleocr>=2.0.1"
+#all = [
+#    "pyscreenshot",
+#    "pillow"
 #]
 
 test = [

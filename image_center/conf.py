@@ -6,11 +6,13 @@ class _Setting:
     PIC_PATH = ""
     IMAGE_RATE = 0.9
     SCREEN_CACHE = "/tmp/screen.png"
-
-    OPENCV_SERVER_HOST = ""
     TMPDIR = "/tmp/tmpdir"
     IMAGE_MATCH_NUMBER = 1
     IMAGE_MATCH_WAIT_TIME = 1
+
+    # RPC config
+    SERVER_IP = ""
+    PORT = 8889
 
     if platform.system() == "Linux":
         # 显示服务器
@@ -24,6 +26,7 @@ class _Setting:
 
         IS_X11 = (DISPLAY_SERVER == DisplayServer.x11)
         IS_WAYLAND = (DISPLAY_SERVER == DisplayServer.wayland)
-
+    elif platform.system() == "Windows":
+        ...
 
 setting = _Setting()

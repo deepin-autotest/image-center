@@ -75,7 +75,7 @@ class ImageCenter:
             )
         template_path = f"{image_path}.png"
         if GET_OPENCV_FORM_RPC:
-            server = ServerProxy(setting.OPENCV_SERVER_HOST, allow_none=True)
+            server = ServerProxy(f"http://{setting.SERVER_IP}:{setting.PORT}", allow_none=True)
             source_rb = open(setting.SCREEN_CACHE, "rb")
             template_rb = open(template_path, "rb")
             try:
@@ -85,7 +85,7 @@ class ImageCenter:
                 template_rb.close()
                 return server.match_image_by_opencv(tpl_path, source_path, rate, multiple)
             except OSError:
-                raise EnvironmentError(f"RPC服务器链接失败. {setting.OPENCV_SERVER_HOST}")
+                raise EnvironmentError(f"RPC服务器链接失败. http://{setting.SERVER_IP}:{setting.PORT}")
         else:
             if not os.path.exists(template_path):
                 raise TemplatePictureNotExist(template_path)
@@ -286,7 +286,7 @@ class ImageCenterByRGB:
         return same / (same + diff) >= rate
 
     @classmethod
-    def image_center_by_rgb(cls, image_name=None, image_path=None, rate=setting.RATE):
+    def image_center_by_rgb(cls, image_name=None, image_path=None, rate=setting.IMAGE_RATE):
         """
         By comparing the RGB values of the small image with the large
         image on the screen, the coordinates of the small image on

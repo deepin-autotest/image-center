@@ -1,4 +1,6 @@
+from image_center.server import server
+from image_center.conf import setting
 
-from image_center import ImageCenter
+setting.PORT = 8889  # 默认端口是8889，可以修改为其他端口；
 
-ImageCenter.find_image("~/Desktop/test.png")
+server()
