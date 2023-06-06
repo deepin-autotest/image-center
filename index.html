@@ -299,6 +299,13 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#rpc" class="md-nav__link">
+    RPC服务
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -347,6 +354,13 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#rpc" class="md-nav__link">
+    RPC服务
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -379,6 +393,13 @@
 <span data-ty="progress"></span>
 <span data-ty></span>
 </div></p>
+<p>如果想在本机直接使用图像识别，还需要在本机安装OpenCV</p>
+<p>
+<div class="termy" data-termynal>
+<span data-ty>sudo apt install python3-opencv</span>
+<span data-ty="progress"></span>
+<span data-ty></span>
+</div></p>
 <h2 id="_2">使用说明</h2>
 <p>截取目标元素图片，将图片保存到某个路径；</p>
 <pre><code class="language-python">from image_center import ImageCenter
@@ -386,6 +407,26 @@
 ImageCenter.find_image(&quot;~/Desktop/test.png&quot;)
 </code></pre>
 <p>返回 <code>test.png</code> 在当前屏幕中的位置。</p>
+<h2 id="rpc">RPC服务</h2>
+<p>如果不想在本机安装OpenCV，或者你的机器无法安装OpenCV，可以在服务端安装OpenCV（安装方法和上面一样）；</p>
+<p>服务端启动方法：</p>
+<pre><code class="language-python">from image_center.server import server
+from image_center.conf import setting
+
+setting.PORT = 8889  # 默认端口是8889，可以修改为其他端口；
+
+server()
+</code></pre>
+<p>执行这个代码就可以启动服务了；</p>
+<p>客户端使用方法和前面一样，唯一需要配置的是服务端的IP和端口。</p>
+<pre><code class="language-python">from image_center import ImageCenter
+from image_center.conf import setting
+
+setting.SERCER_IP = &quot;192.168.2.1&quot;  # 服务端IP
+setting.PORT = 8889 # 和服务端端口保持一致
+
+ImageCenter.find_image(&quot;~/Desktop/test.png&quot;) # test.png是你自己截的图，路径也修改成你自己的路径
+</code></pre>
 
 
   
