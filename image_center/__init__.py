@@ -1,8 +1,9 @@
+import logging
 import os
 import random
-import time
-import logging
 from time import sleep
+from time import time
+from typing import List, Union
 from xmlrpc.client import Binary
 from xmlrpc.client import ServerProxy
 
@@ -54,44 +55,68 @@ class TemplatePictureNotExist(BaseException):
 class ImageCenter:
     """图像识别的工具类"""
 
-    @staticmethod
-    def _match_image_by_opencv(image_path, rate=None, multiple=False):
+    wayland_screen_dbus = "qdbus org.kde.KWin /Screenshot screenshotFullscreen"
+
+    @classmethod
+    def _match_image_by_opencv(
+            cls,
+            image_path: str,
+            rate: float = None,
+            multiple: bool = False,
+            picture_abspath: str = None,
+            screen_bbox: List[int] = None,
+            log_level: str = "info",
+    ):
         """
          图像识别，匹配小图在屏幕中的坐标 x, y
         :param image_path: 图像识别目标文件的存放路径
         :param rate: 匹配度
         :param multiple: 是否返回匹配到的多个目标
-        :return: 根据匹配度返回坐标
+        :param picture_abspath: 大图，默认大图是截取屏幕，否则使用传入的图片；
+        :param screen_bbox: 截取屏幕上指定区域图片（仅支持X11下使用）；
+            [x, y, w, h]
+            x: 左上角横坐标；y: 左上角纵坐标；w: 宽度；h: 高度；根据匹配度返回坐标
         """
+        # pylint: disable=I1101,E1101
         if rate is None:
             rate = float(setting.IMAGE_RATE)
-        if setting.IS_X11:
-            pyscreenshot.grab().save(setting.SCREEN_CACHE)
+        screen = setting.SCREEN_CACHE
+
+        if not picture_abspath:
+            if screen_bbox:
+                screen = cls.save_temporary_picture(*screen_bbox) + ".png"
+            else:
+                if setting.IS_X11:
+                    pyscreenshot.grab().save(screen)
+                else:
+                    screen = os.popen(cls.wayland_screen_dbus).read().strip("\n")
         else:
-            setting.SCREEN_CACHE = (
-                os.popen("qdbus org.kde.KWin /Screenshot screenshotFullscreen")
-                    .read()
-                    .strip("\n")
-            )
+            screen = picture_abspath
         template_path = f"{image_path}.png"
         if GET_OPENCV_FORM_RPC:
             server = ServerProxy(f"http://{setting.SERVER_IP}:{setting.PORT}", allow_none=True)
-            source_rb = open(setting.SCREEN_CACHE, "rb")
+            # pylint: disable=consider-using-with
+            screen_rb = open(screen, "rb")
+            # pylint: disable=consider-using-with
             template_rb = open(template_path, "rb")
             try:
-                source_path = server.image_put(Binary(source_rb.read()))
-                source_rb.close()
+                screen_path = server.image_put(Binary(screen_rb.read()))
+                screen_rb.close()
                 tpl_path = server.image_put(Binary(template_rb.read()))
                 template_rb.close()
-                return server.match_image_by_opencv(tpl_path, source_path, rate, multiple)
-            except OSError:
-                raise EnvironmentError(f"RPC服务器链接失败. http://{setting.SERVER_IP}:{setting.PORT}")
+                return server.match_image_by_opencv(
+                    tpl_path, screen_path, rate, multiple
+                )
+            except OSError as exc:
+                raise EnvironmentError(
+                    f"RPC服务器链接失败. http://{setting.SERVER_IP}:{setting.PORT}"
+                ) from exc
         else:
             if not os.path.exists(template_path):
                 raise TemplatePictureNotExist(template_path)
-            source = cv.imread(setting.SCREEN_CACHE)
+            screen = cv.imread(screen)
             template = cv.imread(template_path)
-            result = cv.matchTemplate(source, template, cv.TM_CCOEFF_NORMED)
+            result = cv.matchTemplate(screen, template, cv.TM_CCOEFF_NORMED)
             if not multiple:
                 pos_start = cv.minMaxLoc(result)[3]
                 _x = int(pos_start[0]) + int(template.shape[1] / 2)
@@ -103,87 +128,132 @@ class ImageCenter:
                     else template_path
                 )
                 if similarity < rate:
-                    logger.info(f"{tmp_log} | 相似度:{round(similarity * 100, 2)}% ")
+                    getattr(logger, log_level)(f"{tmp_log} | 相似度:{round(similarity * 100, 2)}% ")
                     return False
-                logger.info(f"{tmp_log} | 坐标:{_x, _y} | 相似度:{round(similarity * 100, 2)}%")
+                if screen_bbox:
+                    bbox_x, bbox_y, *_ = screen_bbox
+                    _x = bbox_x + _x
+                    _y = bbox_y + _y
+                getattr(logger, log_level)(
+                    f"{tmp_log} | 坐标:{_x, _y} | 相似度:{round(similarity * 100, 2)}%"
+                )
                 return _x, _y
-            else:
-                loc = np.where(result >= rate)
-                tmp_list_out = []
-                tmp_list_in = []
-                loc_list = list(zip(*loc))
-                for i in range(0, len(loc_list) - 1):
-                    tmp_list_in.append(loc_list[i])
-                    if (
-                            loc_list[i + 1][0] != loc_list[i][0]
-                            or (loc_list[i + 1][1] - loc_list[i][1]) > 1
-                    ):
-                        tmp_list_out.append(tmp_list_in)
-                        tmp_list_in = []
-                        continue
-                    if i == len(loc_list) - 2:
-                        tmp_list_in.append(loc_list[-1])
-                        tmp_list_out.append(tmp_list_in)
-                result_list = []
-                x_list, y_list = [], []
-                if tmp_list_out:
-                    for i in tmp_list_out:
-                        for j in i:
-                            x_list.append(j[1])
-                            y_list.append(j[0])
-                        x = np.mean(x_list) + int(template.shape[1] / 2)
-                        y = np.mean(y_list) + int(template.shape[0] / 2)
-                        result_list.append((x, y))
-                        x_list, y_list = [], []
-                    result_list.sort(key=lambda x: x[0])
-                    return result_list
-                return False
-
-    @staticmethod
-    def save_temporary_picture(x: int, y: int, width: int, height: int):
-        """
-         截取屏幕上指定区域图片，保存临时图片，并返回图片路径
-        :param x: 左上角横坐标
-        :param y: 左上角纵坐标
-        :param width: 宽度
-        :param height: 高度
-        :return: 图片路径
-        """
-        if setting.IS_X11:
-            if not os.path.exists(setting.TMPDIR):
-                os.popen(f"mkdir {setting.TMPDIR}")
-            _pic_path = f"{setting.TMPDIR}/{int(time.time())}"
-            pyscreenshot.grab().save(setting.SCREEN_CACHE)
-            pyscreenshot.grab(bbox=(x, y, x + width, y + height)).save(_pic_path + ".png")
-            logger.info(f"截取区域左上角 ({x}, {y}), 长宽 {width}, {height}")
-            return _pic_path
+            # multiple = True
+            loc = np.where(result >= rate)
+            tmp_list_out = []
+            tmp_list_in = []
+            loc_list = list(zip(*loc))
+            for i in range(0, len(loc_list) - 1):
+                tmp_list_in.append(loc_list[i])
+                if (
+                        loc_list[i + 1][0] != loc_list[i][0]
+                        or (loc_list[i + 1][1] - loc_list[i][1]) > 1
+                ):
+                    tmp_list_out.append(tmp_list_in)
+                    tmp_list_in = []
+                    continue
+                if i == len(loc_list) - 2:
+                    tmp_list_in.append(loc_list[-1])
+                    tmp_list_out.append(tmp_list_in)
+            result_list = []
+            x_list, y_list = [], []
+            if tmp_list_out:
+                for i in tmp_list_out:
+                    for j in i:
+                        x_list.append(j[1])
+                        y_list.append(j[0])
+                    _x = np.mean(x_list) + int(template.shape[1] / 2)
+                    _y = np.mean(y_list) + int(template.shape[0] / 2)
+                    result_list.append((_x, _y))
+                    x_list, y_list = [], []
+                result_list.sort(key=lambda x: x[0])
+                return result_list
+            return False
 
     @classmethod
-    def find_image(cls, *widget, rate: [float, int] = None, multiple: bool = False, match_number: int = None):
+    def save_temporary_picture(cls, _x: int, _y: int, width: int, height: int, log_level="info"):
+        """
+         截取屏幕上指定区域图片，保存临时图片，并返回图片路径
+        :param _x: 左上角横坐标
+        :param _y: 左上角纵坐标
+        :param width: 宽度
+        :param height: 高度
+        :param log_level: 日志级别
+        :return: 图片路径
+        """
+        # pylint: disable=I1101,E1101
+        if not os.path.exists(setting.TMPDIR):
+            os.popen(f"mkdir {setting.TMPDIR}")
+        _pic_path = f"{setting.TMPDIR}/{int(time())}"
+
+        if setting.IS_X11:
+            pyscreenshot.grab().save(setting.SCREEN_CACHE)
+            pyscreenshot.grab(bbox=(_x, _y, _x + width, _y + height)).save(
+                _pic_path + ".png"
+            )
+            getattr(logger, log_level)(f"截取区域左上角 ({_x}, {_y}), 长宽 {width}, {height}")
+        else:
+            screen = os.popen(cls.wayland_screen_dbus).read().strip("\n")
+            img = cv.imread(screen)
+            cv.imwrite(_pic_path, img[_y: _y + height, _x: _x + width])
+        return _pic_path
+
+    @classmethod
+    def find_image(
+            cls,
+            *widget,
+            rate: Union[float, int] = None,
+            multiple: bool = False,
+            match_number: int = None,
+            pause: Union[int, float] = None,
+            picture_abspath: str = None,
+            screen_bbox: List[int] = None,
+            log_level: str = "info"
+    ):
         """
          在屏幕中区寻找小图，返回坐标，
          如果找不到，根据配置重试次数，每次间隔1秒
+        :param picture_abspath:
         :param widget: 模板图片路径
         :param rate: 相似度
         :param multiple: 是否返回匹配到的多个目标
         :param match_number: 图像识别重试次数
+        :param pause: 图像识别重试的间隔时间
+        :param screen_bbox: 截取屏幕上指定区域图片（仅支持X11下使用）；
+            [x, y, w, h]
+            x: 左上角横坐标；y: 左上角纵坐标；w: 宽度；h: 高度；根据匹配度返回坐标
+        :param log_level: 日志级别
         :return: 坐标元组
         """
+        retry_number = int(setting.IMAGE_MATCH_NUMBER)
+        if match_number is not None:
+            retry_number = match_number
+        if retry_number < 0:
+            raise ValueError("重试次数不能小于0")
+
         if rate is None:
             rate = float(setting.IMAGE_RATE)
         try:
             for element in widget:
-                for _ in range((match_number or int(setting.IMAGE_MATCH_NUMBER)) + 1):
+                for _ in range(retry_number + 1):
                     locate = cls._match_image_by_opencv(
-                        element, rate, multiple=multiple
+                        element,
+                        rate,
+                        multiple=multiple,
+                        picture_abspath=picture_abspath,
+                        screen_bbox=screen_bbox,
+                        log_level=log_level
                     )
                     if not locate:
-                        sleep(int(setting.IMAGE_MATCH_WAIT_TIME))
+                        sleep_time = int(setting.IMAGE_MATCH_WAIT_TIME)
+                        if pause is not None:
+                            sleep_time = pause
+                        sleep(sleep_time)
                     else:
                         return locate
             raise TemplateElementNotFound(*widget)
-        except Exception as e:
-            raise e
+        except Exception as exc:
+            raise exc
 
     @staticmethod
     def find_image_color(widget):
@@ -196,17 +266,17 @@ class ImageCenter:
             if not os.path.exists(widget):
                 raise TemplatePictureNotExist(widget)
             _color = []
-            with Image.open(widget) as im:
-                pix = im.load()
-                width = im.size[0]
-                height = im.size[1]
-                for x in range(width):
-                    for y in range(height):
-                        r, g, b = pix[x, y]
-                        _color.append((r, g, b))
+            with Image.open(widget) as image:
+                pix = image.load()
+                width = image.size[0]
+                height = image.size[1]
+                for _x in range(width):
+                    for _y in range(height):
+                        _r, _g, _b = pix[_x, _y]
+                        _color.append((_r, _g, _b))
             return _color
-        except Exception as e:
-            raise e
+        except Exception as exc:
+            raise exc
 
     @classmethod
     def img_exists(cls, widget, rate=None):
@@ -220,7 +290,9 @@ class ImageCenter:
             rate = float(setting.IMAGE_RATE)
         try:
             return bool(cls.find_image(widget, rate=rate))
-        except:
+        # pylint: disable=broad-except
+        except Exception as exc:
+            logger.warning(exc)
             return False
 
     @staticmethod
@@ -230,6 +302,46 @@ class ImageCenter:
         :param pic_position: 图片路径
         """
         return Image.open(os.path.expanduser(pic_position)).size
+
+    @classmethod
+    def get_during(
+            cls,
+            image_path: str,
+            screen_time: Union[float, int],
+            rate: float = None,
+            pause: Union[int, float] = None,
+            max_range: int = 10000,
+    ):
+        """
+        在一段时间内截图多张图片进行识别，其中有一张图片识别成功即返回结果;
+        适用于气泡类的断言，比如气泡在1秒内消失，如果用常规的图像识别则有可能无法识别到；
+        :param image_path: 要识别的模板图片；
+        :param screen_time: 截取屏幕图片的时间，单位秒；
+        :param rate: 识别率；
+        :param pause: 截取屏幕图片的间隔时间，默认不间隔；
+        """
+        during_path = "/tmp/youqu_during"
+        os.system(f"rm -rf {during_path}")
+        os.makedirs(during_path)
+        pics = []
+        start_time = time()
+        for i in range(max_range):
+            pic_name = f"{during_path}/{time()}_{i}.png"
+            pics.append(pic_name)
+            pyscreenshot.grab().save(pic_name)
+            if time() - start_time >= screen_time:
+                break
+            if pause:
+                sleep(pause)
+        if not pics:
+            raise ValueError
+        for pic_path in pics:
+            res = cls._match_image_by_opencv(
+                image_path, rate=rate, picture_abspath=pic_path
+            )
+            if res:
+                return res
+        raise TemplateElementNotFound(image_path)
 
 
 class ImageCenterByRGB:
