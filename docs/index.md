@@ -6,9 +6,9 @@
 
 ---
 
-**Documentation**: <a href="https://funny-test.github.io/image-center" target="_blank">https://funny-test.github.io/image-center</a>
+**Documentation**: <a href="https://funny-dream.github.io/image-center" target="_blank">https://funny-dream.github.io/image-center</a>
 
-**Source Code**: <a href="https://github.com/funny-test/image-center" target="_blank">https://github.com/funny-test/image-center</a>
+**Source Code**: <a href="https://github.com/funny-dream/image-center" target="_blank">https://github.com/funny-dream/image-center</a>
 
 ---
 
