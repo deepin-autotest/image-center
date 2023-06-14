@@ -1,3 +1,3 @@
 __title__ = "image-center"
 
-__version__ = "1.1.2"
+__version__ = "2023.6.14"
