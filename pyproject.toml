@@ -25,10 +25,6 @@ dependencies = [
 dynamic = ["version"]
 
 [project.optional-dependencies]
-#all = [
-#    "pyscreenshot",
-#    "pillow"
-#]
 
 test = [
     "pytest",

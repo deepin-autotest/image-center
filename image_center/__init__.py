@@ -195,7 +195,7 @@ class ImageCenter:
         else:
             screen = os.popen(cls.wayland_screen_dbus).read().strip("\n")
             img = cv.imread(screen)
-            cv.imwrite(_pic_path, img[_y: _y + height, _x: _x + width])
+            cv.imwrite(_pic_path + ".png", img[_y: _y + height, _x: _x + width])
         return _pic_path
 
     @classmethod
